@@ -1,0 +1,1234 @@
+---
+title: "Advanced_Multivariate_Statistical_Analysis"
+author: "Mehdi Koşaca"
+date: "2024-12-01"
+output:
+  word_document: default
+  pdf_document:
+    latex_engine: xelatex
+---
+
+# 1) Keşifci Veri Analizi (EDA)
+
+### Veri Seti Tanımı
+
+Bu veri seti, Hindistan'daki birçok branşlı hastaneden alınmış olup, 1000 kişinin verilerini içermektedir. Erken aşama kalp hastalığı tespiti **amacıyla toplanmıştır**. Toplamda 14 **farklı değişken** içermektedir.
+
+```{r}
+library(readxl) 
+df <- read.csv("C:/data_set/Cardiovascular_Dataset.csv")
+head(df)
+```
+
+```{r}
+df$gender<- as.factor(df$gender)
+df$chestpain<- as.factor(df$chestpain)
+df$fastingbloodsugar<- as.factor(df$fastingbloodsugar)
+df$restingrelectro<- as.factor(df$restingrelectro)
+df$exerciseangia<- as.factor(df$exerciseangia)
+df$slope<- as.factor(df$slope)
+df$noofmajorvessels<- as.factor(df$noofmajorvessels)
+df$target<- as.factor(df$target)
+```
+
+```{r}
+str(df)
+```
+
+Veri setinde 1000 gözlem ve 14 değişken bulunmaktadır.
+
+### Değişkenler
+
+1.  **Patient Identification Number (`patientid`)**: Hastaya özgü tanımlayıcı numara (Sayısal).
+
+2.  **Age (`age`)**: Hastanın yaşı (Yıl cinsinden).
+
+3.  **Gender (`gender`)**: Cinsiyet (0: Kadın, 1: Erkek).
+
+4.  **Resting Blood Pressure (`restingBP`)**: İstirahat kan basıncı (mm Hg cinsinden).
+
+5.  **Serum Cholesterol (`serumcholestrol`)**: Serum kolesterol seviyesi (mg/dl cinsinden).
+
+6.  **Fasting Blood Sugar (`fastingbloodsugar`)**: Açlık kan şekeri (0: ≤120 mg/dl, 1: \>120 mg/dl).
+
+7.  **Chest Pain Type (`chestpain`)**: Göğüs ağrısı türü (0: Tipik angina, 1: Atipik angina, 2: Non-anginal, 3: Asemptomatik).
+
+8.  **Resting Electrocardiogram Results (`restingelectro`)**: Elektrokardiyografi sonucu (0: Normal, 1: ST-T dalga anormalliği, 2: Sol ventrikül hipertrofisi).
+
+9.  **Maximum Heart Rate Achieved (`maxheartrate`)**: Elde edilen maksimum kalp hızı.
+
+10. **Exercise Induced Angina (`exerciseangina`)**: Egzersiz kaynaklı göğüs ağrısı (0: Hayır, 1: Evet).
+
+11. **Oldpeak (`oldpeak`)**: Egzersiz sonrası ST depresyonu (0-6.2 arasında).
+
+12. **Slope (`slope`)**: Egzersiz sonrası ST segment eğimi (1: Yükselen, 2: Yatay, 3: Düşen).
+
+13. **Number of Major Vessels (`noofmajorvessels`)**: Floroskopi ile görülen majör damar sayısı (0-3 arasında).
+
+14. **Classification (`target`)**: Kalp hastalığı durumu (0: Yok, 1: Var).
+
+```{r}
+summary(df)
+```
+
+Bu çıktı, df veri setindeki değişkenlerin özet istatistiklerini ve dağılımlarını göstermektedir
+
+### eksik gözlemlerin incelenmesi
+
+```{r}
+any(is.na(df))
+```
+
+```{r}
+sum(is.na(df))
+```
+
+```{r}
+library(naniar)
+library(ggplot2)
+
+gg_miss_var(df) + 
+  labs(title = "Eksik Deger Sayıları",
+       x = "Degişkenler",
+       y = "Eksik Deger Sayısı") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+Veri setinde yer alan tüm değişkenler için eksik gözlem bulunmamaktadır; her bir gözlemdeki tüm değerler eksiksizdir.
+
+```{r}
+unique(df$serumcholestrol)
+
+```
+
+```{r}
+sum(df$serumcholestrol == 0)
+
+```
+
+```{r}
+df <- df[df$serumcholestrol != 0, ]
+
+```
+
+Serumcholestrol değişkeninde 0 değerleri tespit edilmiştir. Bu değerler, hatalı veya eksik gözlemler olarak değerlendirilmiş ve bu nedenle silinmiştir.
+
+```{r}
+str(df)
+```
+
+Veri temizliği tamamlandı, 947 gözlem ve 14 değişken ile devam edilmiştir.
+
+### Sayısal Değişkenlerin Çarpıklık ve Dağılımının İncelenmesi
+
+```{r}
+boxplot(df$restingBP, main = "kan basıncı (mm Hg cinsinden)")
+```
+
+Kutu grafiği, kan basıncının 130 ile 170 mm Hg arasında olduğunu ve medyanın yaklaşık 150 mm Hg olduğunu gösteriyor. Minimum değer yaklaşık 100 mm Hg ve maksimum değer yaklaşık 200 mm Hg'dir.
+
+```{r}
+ggplot(df, aes(x = age)) +
+ geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+ labs(title = "Histogram", x = "yaş", y = "Gozlem sayısı")
+```
+
+Bu histogram, yaşların 20 ile 80 arasında değiştiğini ve en yoğun gözlemlerin 20 yaş civarında olduğunu gösteriyor. Yaş dağılımı genelde homojen, ancak genç yaşlarda daha yüksek bir yoğunluk var.
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = maxheartrate)) + 
+  geom_density(fill = "blue", alpha = 0.3) + 
+  theme_minimal() + 
+  ggtitle("maksimum kalp hızı")
+```
+
+Bu yoğunluk grafiği, maksimum kalp hızının 60 ile 200 arasında değiştiğini ve en yoğun aralığın 140-160 civarında olduğunu gösteriyor. Grafikte iki belirgin tepe bulunuyor, bu da farklı grupların varlığını işaret edebilir.
+
+```{r}
+ggplot(df, aes(x = oldpeak)) +
+ geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+ labs(title = "Egzersiz sonrası ST depresyonu", x = "oldpeak")
+
+```
+
+Bu grafik, egzersiz sonrası ST depresyonunun çoğunlukla orta seviyelerde olduğunu, ancak bazı durumlarda daha yüksek veya daha düşük değerlerde olduğunu gösteriyor.
+
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = serumcholestrol)) + 
+  geom_density(fill = "blue", alpha = 0.3) + 
+  theme_minimal() + 
+  ggtitle("kolesterol seviyesi")
+
+```
+
+bu grafik, kolesterol seviyelerinin çoğunlukla 200 ile 400 arasında olduğunu ve bu aralıkta iki belirgin tepe gösterdiğini, ancak 0 ile 200 ve 400 ile 600 arasında daha az yoğunluk gösterdiğini göstermektedir
+
+#### Sayısal Değişkenlerin Çarpıklık Durumunun Detaylı İncelenmesi
+
+```{r}
+library(e1071)
+numerical_vars <- c("age", "restingBP", "serumcholestrol", "maxheartrate", "oldpeak")
+
+# Çarpıklık hesaplama
+skewness_results <- sapply(df[, numerical_vars], skewness)
+
+# Çarpıklık sonuçlarını yazdırma
+print(skewness_results)
+
+# En çarpık değişkeni bulma
+most_skewed <- names(skewness_results)[which.max(abs(skewness_results))]
+cat("En carpık değişken:", most_skewed, "\n")
+```
+
+-   **age**: 0.02296 – Bu, yaş değişkeninin normal dağılıma yakın olduğunu gösterir. Çarpıklık değeri çok düşük, bu da simetrik bir dağılımı işaret eder.
+
+-   **restingBP**: 0.06476 – İstirahat kan basıncı da benzer şekilde çok düşük bir çarpıklığa sahip, bu da dağılımın simetrik olduğuna işaret eder.
+
+-   **serumcholestrol**: 0.18442 – Serum kolesterol seviyesi için çarpıklık biraz daha yüksek, ancak hala oldukça düşük bir değer. Dağılımda hafif bir sağ çarpıklık olabilir.
+
+-   **maxheartrate**: -0.23984 – Maksimum kalp hızı değişkeninin çarpıklığı negatif, bu da verinin sağa kıyasla daha çok sola çarpık olduğunu ve yüksek kalp hızı değerlerinin daha az sıklıkta olduğunu gösterebilir.
+
+-   **oldpeak**: 0.29856 – Egzersiz sonrası ST depresyonu değişkeni de pozitif çarpıklığa sahip ve bu, verinin sağa çarpık olduğunu, yani düşük değerlerin daha yaygın olduğunu gösterir.
+
+### Kategorik değişkenlerin incelenmesi
+
+```{r}
+# Gerekli kütüphaneler
+library(ggplot2)
+library(gridExtra) # Birden fazla grafiği düzenlemek için
+
+# Kategorik değişkenler
+categorical_vars <- c("gender", "fastingbloodsugar", "chestpain", "restingrelectro", "exerciseangia", "slope", "noofmajorvessels", "target")
+
+# Bar grafiklerini oluştur ve ikili gruplar halinde göster
+for (i in seq(1, length(categorical_vars), by = 2)) {
+  # İkişerli grup
+  vars <- categorical_vars[i:min(i + 1, length(categorical_vars))]
+  
+  # Grafik oluşturma
+  plots <- lapply(vars, function(var) {
+    ggplot(df, aes_string(x = var)) +
+      geom_bar(fill = "steelblue", color = "black") +
+      labs(title = paste("Frekans Dağılımı:", var), x = var, y = "Frekans") +
+      theme_minimal()
+  })
+  
+  # Grafikleri yan yana düzenle
+  grid.arrange(grobs = plots, ncol = 2)
+}
+```
+
+-   **gender (cinsiyet):** Veri kümesi **erkek** ağırlıklı.
+
+-   **fastingbloodsugar (açlık kan şekeri):** Çoğunluğun açlık kan şekeri seviyeleri 120 mg/dl ve altında. 120 mg/dl'nin üzerinde olanlar daha az yaygın.
+
+-   **chestpain (göğüs ağrısı):** Tipik angina, diğer göğüs ağrısı türlerine göre daha sık görülüyor. Asemptomatik göğüs ağrısı en az yaygın olanı.
+
+-   **restingelectro (dinlenme EKG'si):** Normal dinlenme EKG sonuçları baskın. ST-T dalgası anormallikleri ve sol ventrikül hipertrofisi daha az görülüyor.
+
+-   **exerciseangina (egzersiz anjini):** Veri setinde, egzersizle tetiklenen anjina ve egzersizle tetiklenmeyen anjina vakaları neredeyse eşit sayıda dağılmış.
+
+-   **slope (eğim/ST segment eğimi):** Yükselen ST segmenti, diğer eğim türlerine göre en yaygın olanı. Yatay eğim ikinci sırada, düşen eğim ise en az yaygın.
+
+-   **noofmajorvessels (floroskopi ile görülen majör damar sayısı):** Floroskopi ile tespit edilen majör damar sayısı düşük olan kişiler daha yaygın. Üç damarlı kişiler daha az görülüyor.
+
+-   **target (hedef değişken - kalp hastalığı):** Kalp hastalığı olanların sayısı, olmayanlara göre biraz daha fazla, bu da veri kümesinde hafif bir dengesizlik olduğunu gösteriyor.
+
+# 2) Manova
+
+### Multivariate Normality
+
+```{r}
+suppressMessages(library(dplyr))
+suppressMessages(library(rstatix))
+
+df %>%
+  dplyr::select(maxheartrate,serumcholestrol,restingBP,age) %>%
+  mshapiro_test()
+```
+
+-   **H0 (Sıfır Hipotezi):** age,maxheartrate, serumcholestrol ve restingBP değişkenleri normal dağılmıştır.
+
+-   **H1 (Alternatif Hipotez):** age,maxheartrate, serumcholestrol ve restingBP değişkenlerinden en az biri normal dağılmamıştır
+
+    **Yorum:**
+
+    Shapiro-Wilk testi sonucunda p-değeri çok düşük ( 0.05442 \> 0.05) **H0 reddedilemez**. Bu da şu anlama gelir:
+
+    **H0 reddedilemez**: age,maxheartrate, serumcholestrol ve restingBP değişkenlerinin normal dağıldığı varsayımını reddetmek için yeterli kanıt olmadığı anlamına gelir.
+
+```{r}
+# Sayısal değişkenlerin isimleri
+numeric_vars <- c("age", "restingBP", "serumcholestrol", "maxheartrate", "oldpeak")
+
+# Shapiro-Wilk testi uygulama fonksiyonu
+shapiro_test_results <- function(df, vars) {
+  for (var in vars) {
+    test_result <- shapiro.test(df[[var]])  # Shapiro-Wilk testi
+    cat(paste("Değişken:", var, "\n"))
+    cat("Test istatistiği:", test_result$statistic, "\n")
+    cat("p-değeri:", test_result$p.value, "\n")
+    cat("\n")
+  }
+}
+
+shapiro_test_results(df, numeric_vars)
+```
+
+#### Target(hedef değişken - kalp hastalığı) için:
+
+```{r}
+suppressMessages(library(gplots))
+
+plotmeans(restingBP ~ target, xlab="target", ylab="restingBP", main="Mean Plot\nwith 95% CI", data=df)
+plotmeans(age ~ target, xlab="target", ylab="age", main="Mean Plot\nwith 95% CI", data=df)
+plotmeans(maxheartrate ~ target, xlab="target", ylab="maxheart rate", main="Mean Plot\nwith 95% CI", data=df)
+plotmeans(serumcholestrol ~ target, xlab="target", ylab="maxheart rate", main="Mean Plot\nwith 95% CI", data=df)
+
+```
+
+#### restingrelectro(dinlenme EKG’si) için:
+
+```{r}
+plotmeans(restingBP ~ restingrelectro, xlab="restingrelectro", ylab="restingBP", main="Mean Plot\nwith 95% CI", data=df)
+
+plotmeans(age ~ restingrelectro, xlab="restingrelectro", ylab="age", main="Mean Plot\nwith 95% CI", data=df)
+
+plotmeans(maxheartrate ~ restingrelectro, xlab="restingrelectro", ylab="max heart rate", main="Mean Plot\nwith 95% CI", data=df)
+plotmeans(serumcholestrol ~ restingrelectro, xlab="restingrelectro", ylab="maxheart rate", main="Mean Plot\nwith 95% CI", data=df)
+```
+
+### Homogeneity of Covariances
+
+```{r}
+library(biotools)
+box_m(df[, c( "maxheartrate","serumcholestrol","restingBP","age")], df$target)
+```
+
+**Hipotezler:**
+
+-   **H0 (Sıfır Hipotezi):** Gruplara ait kovaryans matrisleri eşittir (homojenlik vardır).
+
+-   **H1 (Alternatif Hipotez):** Gruplara ait kovaryans matrisleri eşit değildir (homojenlik yoktur).
+
+**Yorum:**
+
+**p-value = 0.95397**, 0.05'ten büyük olduğu için(**3.83 × 10⁻¹⁷\<0.05=a)** **H0 reddedilir**. Bu durumda, gruplara ait kovaryans matrislerinin eşit olmadığı (homojenlik varsayımının sağlandığı) sonucuna varılır.
+
+### Tek Yönlü Manova
+
+-   **restingrelectro**(hedef) değişkeninin **maxheartrate** (maksimum kalp atış hızı), **serumcholestrol** (serum kolesterol), **restingBP** (dinlenik kan basıncı) ve **age** (yaş) üzerindeki etkilerini incelemektedir. Bu analiz, **restingrelectro'ın** bu sağlık parametreleri üzerindeki çoklu etkilerini değerlendirmeyi amaçlamaktadır.
+
+```{r}
+manova_df <- manova(cbind(maxheartrate,serumcholestrol,restingBP,age) ~ restingrelectro,data=df)
+
+```
+
+```{r}
+# car paketi
+library(car)
+
+# Model
+model22 <- glm(restingrelectro ~ restingBP + serumcholestrol + age + maxheartrate, 
+             data = df, 
+             family = binomial())
+
+# VIF 
+vif(model22)
+```
+
+Modeldeki bağımsız değişkenler arasındaki düşük korelasyon (VIF değerleri 1'e yakın) çoklu bağlantı sorununun olmadığını ve restingrelectro bağımlı değişkenin doğru bir şekilde tahmin edilebileceğini gösteriyor.
+
+```{r}
+summary(manova_df, test = "Hotelling-Lawley")
+
+```
+
+**Hipotezler:**
+
+-   **H0 (Sıfır Hipotezi):** restingrelectro değişkeninin bağımlı değişkenler üzerinde anlamlı bir etkisi yoktur.
+
+-   **H1 (Alternatif Hipotezi):** restingrelectro değişkeninin bağımlı değişkenler üzerinde anlamlı bir etkisi vardır.
+
+**p-değeri ( 1.185e-14)** Çok küçük olduğu için **( 1.185e-14 \< 0.05=a)** , **H0 reddedilir**. Bu, restingrelectro değişkeninin bağımlı değişkenler üzerinde anlamlı bir etkisi olduğunu güçlü bir şekilde destekler.
+
+```{r}
+library(tidyr)
+df %>% 
+  pivot_longer( c(maxheartrate,serumcholestrol,restingBP,age),names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  levene_test(value ~ restingrelectro ,center=mean)
+
+```
+
+**Hipotez**
+
+-   **H₀ :** gruplar arasında varyans eşittir.
+
+-   **H₁ :** gruplar arasında varyans eşit değildir.
+
+**Değişken Bazında Yorum:**
+
+1.  **age:**
+
+    -   (p=0.997\> 0.05 =a) **H0 reddedilemez** Gruplar arasında varyanslar **eşittir**.
+
+2.  **maxheartrate:**
+
+    -   (p=0.0017\< 0.05 =a) **H0 reddedilir**Gruplar arasında varyanslar **eşit değildir**.
+
+3.  **restingBP:**
+
+    -   (p=0.0183\< 0.05 =a) **H0 reddedilir**Gruplar arasında varyanslar **eşit değildir**.
+
+4.  **serumcholestrol:**
+
+    -   (p=0.1469\> 0.05 =a) **H0 reddedilemez** Gruplar arasında varyanslar **eşittir**.
+
+        ### Test of Between Subjects
+
+```{r}
+summary.aov(manova_df)
+
+```
+
+**1.maxheartrate (Maksimum Kalp Hızı):**
+
+-   **p-değeri:** 0.0049
+
+-   **Yorum:** p-değeri 0.05'ten küçük (**p \< 0.05**), bu nedenle **H₀ hipotezi reddedilir**. Yani, "restingrelectro" (kalp hastalığı durumu) ile maksimum kalp hızı arasında anlamlı bir ilişki vardır.
+
+**2. serumcholestrol (Serum Kolesterol Seviyesi):**
+
+-   **p-değeri:** \< 1.757e-08
+
+-   **Yorum:** p-değeri 0.05'ten küçük (**p \< 0.05**), bu nedenle **H₀ hipotezi reddedilir**. Yani, "restingrelectro" (kalp hastalığı durumu) ile serum kolesterol seviyesi arasında anlamlı bir ilişki vardır.
+
+**3. restingBP (İstirahat Kan Basıncı):**
+
+-   **p-değeri:** \< 2.83e-11
+
+-   **Yorum:** p-değeri 0.05'ten küçük (**p \< 0.05**), bu nedenle **H₀ hipotezi reddedilir**. Yani, "restingrelectro" (kalp hastalığı durumu) ile istirahat kan basıncı arasında anlamlı bir ilişki vardır.
+
+**4. age (Yaş):**
+
+-   **p-değeri:** 0.08912
+
+-   **Yorum:** p-değeri 0.05'ten büyük (**p \> 0.05**), bu nedenle **H₀ hipotezi reddedilemez**. Yani, yaş değişkeninin "restingrelectro" (kalp hastalığı durumu) üzerinde anlamlı bir etkisi yoktur.
+
+    ### Tukey testi
+
+```{r}
+
+m_tukey2 <- df %>%
+  pivot_longer( c(age,serumcholestrol),names_to = "variables", values_to = "value") %>%
+  group_by(variables) %>%
+  tukey_hsd(value ~ restingrelectro)
+m_tukey2<-m_tukey2[,c(1,4,3,6:10)]
+m_tukey2
+
+```
+
+Hipotez
+
+-   **H₀ :** gruplar arasında anlamlı bir fark yoktur.
+
+-   **H₁ :** gruplar arasında anlamlı bir fark vardır.
+
+    #### Değişken Bazında Yorum:
+
+-   **Yaş** değişkeni için **H0** **reddedilir.** (p-değerleri \< 0.05=a).
+
+-   **Serum Kolesterol** değişkeni için **H0** **reddedilir.** (p-değerleri \<0.05=a), bu da gruplar arasında anlamlı bir fark olduğunu gösterir.
+
+### Levene- Not equal variances - Games Howell
+
+```{r}
+games_howell<-games_howell_test(df,age ~ restingrelectro)
+games_howell
+```
+
+Hipotez
+
+-   **H₀ :** gruplar arasında anlamlı bir fark yoktur.
+
+-   **H₁ :** gruplar arasında anlamlı bir fark vardır.
+
+**p-değerleri \>** 0.05 olduğu için **H0** **reddedilemez**. Yani, yaş değişkeni açısından gruplar arasında anlamlı bir fark olmadığı sonucuna varılabilir.
+
+### Çift Yönlü Manova
+
+-   **restingelectro ve chestpain düzeylerinin restingBP, serumcholestrol ve age üzerindeki etkilerini incelemektedir.**
+
+```{r}
+library(heplots)
+boxM( cbind(restingBP,serumcholestrol,age) ~ restingrelectro*chestpain , data=df)
+```
+
+Hipotez
+
+-   **H₀ :** Varyans Kovaryans matrisleri homojendir.
+
+-   **H₁ :** Varyans Kovaryans matrisleri homojen değildir.
+
+p-değeri **1.197e-05 \< 0.05 Ho Reddedilir yani** Varyans Kovaryans matrisleri homojen olduğu söylenemez.
+
+```{r}
+df_cift <- manova(cbind(restingBP,serumcholestrol,age) ~ restingrelectro*chestpain,data=df)
+
+summary(df_cift, test = "Wilks")
+
+```
+
+Hipotez
+
+-   **H₀ :** **restingelectro ve chestpain** etkileşiminin restingBP, serumcholestrol ve age üzerinde etkisi yoktur.
+
+-   **H₁ :** **restingelectro ve chestpain** etkileşiminin restingBP, serumcholestrol ve age üzerinde etkisi vardır.
+
+**p-değeri = 0.00026**: **H₀** reddedilir, çünkü p-değeri 0.05'ten küçük. Bu, **restingelectro ve chestpain** arasındaki etkileşimin bağımlı değişkenler üzerinde anlamlı bir etkinin olduğunu gösterir.
+
+```{r}
+## Partial Eta Squared Hesaplamak İçin
+etasq(df_cift, test="Wilks")
+```
+
+-   **exerciseangia**: **0.026** (çok küçük, anlamlı etki yok)
+
+-   **fastingbloodsugar**: **0.0453** (önemli, anlamlı etki var)
+
+-   **exerciseangia:fastingbloodsugar**: **0.016** (çok küçük, anlamlı etki yok)
+
+<!-- -->
+
+-   **exerciseangia ve** **fastingbloodsugar** değişkenleri düşük etkiye sahiptir.
+
+```{r}
+#Homogeneity of variance- Levene's Test
+df %>% 
+  pivot_longer( c(restingBP,serumcholestrol,age),names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  levene_test(value ~ restingrelectro*chestpain ,center=mean)
+```
+
+-   **age**: p = 1.65e-01 (Anlamlı, varyanslar eşit değil)
+
+-   **restingBP**: p = 1.07e-16(Anlamlı, varyanslar eşit değil)
+
+-   **serumcholestrol**: p = 2.75e-03 (Anlamlı, varyanslar eşit değil)
+
+**age, serumcholestrol vee restingBP** için varyanslar eşit değil.
+
+```{r}
+### Test of Between Subjects
+summary.aov(df_cift)
+
+```
+
+```{r}
+etasq(aov(restingBP~restingrelectro*chestpain, data=df))
+etasq(aov(serumcholestrol~restingrelectro*chestpain, data=df))
+etasq(aov(age~restingrelectro*chestpain, data=df))
+
+```
+
+```{r}
+# Çoklu Karsilastirmalar (Multiple Comparisons)
+# exerciseangia icin
+m_tukey22 <- df %>%
+  pivot_longer( c(restingBP,serumcholestrol,age),names_to = "variables", values_to = "value") %>%
+  group_by(variables) %>%
+  tukey_hsd(value ~ restingrelectro*chestpain)
+m_tukey22<-m_tukey22[,c(1,2,4,3,6:10)]
+exerciseangia_etk<-filter(m_tukey22, term=="exerciseangia")
+exerciseangia_etk
+```
+
+-   P değerleri tüm değişkenler için 0.05'ten büyük ,exerciseangia (muhtemelen egzersiz anginası durumu) bu değişkenlerin her biri üzerinde anlamlı bir etkiye sahip değildir.
+
+```{r}
+#exerciseangia ve fastingbloodsugar için Etkilesim Grafikleri (Interaction Plots) 
+
+attach(df)
+interaction.plot(restingrelectro,chestpain,restingBP, fun=mean, type="l", legend=TRUE,col=1:3, lwd=2)
+interaction.plot(restingrelectro,chestpain,serumcholestrol, fun=mean, type="l", legend=TRUE, col=1:3,lwd=2)
+interaction.plot(restingrelectro,chestpain,age, fun=mean, type="l", legend=TRUE, col=1:3,lwd=2)
+detach(df)
+```
+
+-   Etkileşim grafikleri, exerciseangia (egzersize bağlı anjina) ve fastingbloodsugar (açlık kan şekeri) faktörlerinin, yaş ve dinlenik kan basıncı değişkenleri üzerinde etkileşim içinde olduğunu göstermektedir. Yani, bu değişkenler üzerindeki etkileri, bu iki faktörün kombinasyonuna göre değişmektedir. Serum kolesterol için ise, etkileşim oldukça zayıf görünmektedir.
+
+# **3) PCA(Temel Bileşenler Analizi)**
+
+```{r}
+#Korelasyon 
+library(PerformanceAnalytics)
+
+chart.Correlation(df[,c("restingBP","age","oldpeak","serumcholestrol","maxheartrate")], histogram=TRUE, pch=19)
+
+```
+
+```{r}
+library(corrplot)
+corrplot(cor(df[,c("restingBP","age","oldpeak","serumcholestrol","maxheartrate")]))
+
+```
+
+```{r}
+library(Hmisc)
+
+# Pearson korelasyon matrisini hesaplama
+rcorr(as.matrix(df[, c("restingBP", "age", "oldpeak", "serumcholestrol", "maxheartrate")]), type = "pearson")
+
+
+```
+
+-   **restingBP** ve **serumcholestrol** arasında **0.22**'lik pozitif bir korelasyon bulunuyor. Bu ilişki düşük, ancak yine de bir miktar ilişki var.
+
+-   **restingBP** ve **maxheartrate** arasında **0.10**'luk zayıf bir ilişki var.
+
+-   **age**, **oldpeak**, ve **serumcholestrol** arasındaki korelasyonlar oldukça düşük, 0.03 ile 0.5263 arasında değişiyor. Bu, bu değişkenlerin birbirlerinden bağımsız olduklarını gösterir.
+
+-   **serumcholestrol** ile **oldpeak** arasındaki korelasyon **-0.02** olarak oldukça düşük, yani bu iki değişken arasında çok az bir ilişki var.
+
+```{r}
+## Korelasyon Matrisinin Determinantı
+det(cor(df[, c("restingBP", "age", "oldpeak", "serumcholestrol", "maxheartrate")]))
+```
+
+Korelasyon matrisinin determinantı **0.9318** gibi yüksek bir değere sahip olduğu için, veri setindeki değişkenlerin çoğu birbirinden bağımsızdır ve PCA analizi yapılabilir. ancak yinede KBO değerine bakılıp karar verilecektir.
+
+```{r}
+library(psych)
+KMO(df[, c("restingBP", "age", "oldpeak", "serumcholestrol", "maxheartrate")])
+```
+
+KMO örneklem yeterliliğne göre KMO\>0.5 olan değişkenler zayıf ancak kabul edilebilir düzeydedir ancak **age** ve **oldpeak** değişkenleri KMO\<0.5 kabul edilemez seviyesinde olduklarından dolayı Temel Bileşenler Analize uygun değildir bu yüzden veri setinden çıkarılıp devam edilmiştir.
+
+```{r}
+# 'age' ve 'oldpeak' değişkenlerini çıkararak yeni bir veri seti oluşturuyoruz
+df_pca <- df[, !(names(df) %in% c("age", "oldpeak"))]
+```
+
+#### Bartlett Küresellik Testi
+
+```{r}
+#Bartlett Küresellik Testi(Bartlett's Test of Spherecity) 
+library(psych)
+cortest.bartlett(cor(df_pca[, c("restingBP", "serumcholestrol", "maxheartrate")])) #Bartlett test
+```
+
+Hipotezler:
+
+-   **H₀ (Null Hipotezi):** Korelasyon matrisi birim matristir (yani değişkenler arasında anlamlı bir korelasyon yoktur).
+
+-   **H₁ (Alternatif Hipotez):** Korelasyon matrisi birim matris değildir (yani değişkenler arasında anlamlı bir korelasyon vardır).
+
+p-değeri= 0.1011 \> **0.05** olduğundan, **H₀ hipotezi reddedilemez**. Bu, değişkenler arasında **anlamlı bir korelasyon olmadığına** işaret eder.
+
+### princomp fonksiyonu
+
+```{r}
+#Temel Bilesenler Analizi- princomp fonksiyonu
+fit.pca <- prcomp( ~., data=df_pca[, c("restingBP", "serumcholestrol", "maxheartrate")], scale=TRUE)
+fit.pca$rotation 
+```
+
+-   **PC1**:
+
+    -   **restingBP (0.646)** ve **serumcholestrol (0.639)**, birinci bileşene en fazla katkı yapan değişkenlerdir.
+
+    -   **PC1**, bu iki değişkenin ortak varyansını yakalayan bir eksen gibi düşünülebilir.
+
+-   **PC2**:
+
+    -   **maxheartrate (-0.907)**, ikinci bileşene güçlü ve negatif bir katkı yapmaktadır. Bu bileşen, özellikle maxheartrate değişkenini temsil ediyor olabilir.
+
+-   **PC3**:
+
+    -   **serumcholestrol (0.700)** ve **restingBP (-0.714)**, üçüncü bileşene katkıda bulunurken, maxheartrate bu bileşene düşük katkı sağlamıştır.
+
+```{r}
+#Bilesen sayisina karar vermek
+summary(fit.pca)
+```
+
+-   PC1, toplam varyansın yaklaşık %43'ünü açıklar.
+
+-   PC2 ve PC3 birlikte toplam varyansın %57'sini açıklamaktadır.
+
+-   İlk iki bileşen, toplam varyansın %74’ünü yakalamaktadır.
+
+```{r}
+(fit.pca$sdev)^2 #ozdegerler
+```
+
+PC1'in veri setindeki en baskın bileşen olduğunu gösterirken, PC3 en az varyans açıklayan bileşendir.
+
+```{r}
+library(factoextra)
+scree <- fviz_eig(fit.pca)
+scree
+```
+
+-   **PC1**: Toplam varyansın **%42**'sini açıklıyor ve en önemli bileşen olarak öne çıkıyor.
+
+-   **PC2**: Toplam varyansın **%31**'ini açıklayarak ikinci en önemli bileşen.
+
+-   **PC3**: Varyansın **%26**'sını açıklıyor ve katkısı daha düşük.
+
+```{r}
+#ilk iki bilesene karar verildi:
+fit.pca$rotation[,1:2] 
+```
+
+Y1= 0.645 restinBP + 0.638 serumcholestrol + 0.418 maxheartrate
+
+Y2= 0.271 restinBP + 0.320 serumcholestrol - 0.907 maxheartrate
+
+```{r}
+fit.pca$rotation[,2]*fit.pca$sdev[2] # koklambda ile carpılmıs hali bu da bizi faktore goturuyor
+```
+
+-   **restingBP**: **0.26** → PC2 ile pozitif ve orta düzeyde bir ilişki gösteriyor.
+
+-   **serumcholestrol**: **0.31** → PC2 ile pozitif yönde daha güçlü bir ilişki gösteriyor.
+
+-   **maxheartrate**: **-0.88** → PC2 ile güçlü ve negatif bir ilişki gösteriyor.
+
+```{r}
+library(factoextra)
+fviz_pca_var(fit.pca,col.var="steelblue",
+             repel = TRUE # Avoid text overlapping
+)
+
+```
+
+-   **serumcholestrol** ve **restingBP** değişkenleri **Dim1**'e benzer yönelim göstererek pozitif katkı sağlıyor.
+
+-   **maxheartrate**, **Dim1**'e ters ve **Dim2**'ye negatif yönde baskın bir yük taşıyor.
+
+-   Değişkenler arasında belirgin bir ilişki ve farklılaşma gözleniyor.
+
+# **4) Faktör Analizi**
+
+```{r}
+df_faktor <- df_pca
+summary(df_faktor)
+```
+
+#### Korelasyon
+
+```{r}
+library(corrplot)
+corrplot(cor(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")]))
+korelasyon<-cor(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")])
+korelasyon
+```
+
+```{r}
+library("Hmisc") #anlamlılık değerleriyle birlikte görmek istersek (2-tailed sonuçlar)
+rcorr(as.matrix(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")]),type="pearson")
+```
+
+**Korelasyon Matrisi (r)**:
+
+-   **restingBP ve serumcholestrol**: Korelasyon değeri 0.22, yani düşük pozitif bir ilişki vardır.
+
+-   **restingBP ve maxheartrate**: Korelasyon değeri 0.10, çok zayıf bir pozitif ilişki vardır.
+
+-   **serumcholestrol ve maxheartrate**: Korelasyon değeri 0.09, çok zayıf bir ilişki vardır.
+
+**Anlamlılık P-değerleri (p)**:
+
+-   **restingBP ve serumcholestrol**: p-değeri 0.0000, bu ilişki istatistiksel olarak anlamlıdır.
+
+-   **restingBP ve maxheartrate**: p-değeri 0.0031, bu ilişki istatistiksel olarak anlamlıdır.
+
+-   **serumcholestrol ve maxheartrate**: p-değeri 0.0072, bu ilişki de istatistiksel olarak anlamlıdır.
+
+```{r}
+library(matlib)
+invkor<-inv(korelasyon)# korelasyon matrisinin tersi (VIF)
+colnames(invkor)<-rownames(invkor)<-colnames(korelasyon)
+invkor
+```
+
+-   **restingBP** için VIF = 1.058, yani bu değişkenin diğer değişkenlerle doğrusal ilişkisi çok güçlü değil.
+
+-   **serumcholestrol** için VIF = 1.056, benzer şekilde, bu değişkenin de diğerleriyle doğrusal ilişkisi düşük.
+
+-   **maxheartrate** için VIF = 1.014, bu da aynı şekilde düşük doğrusal ilişkiyi gösterir.
+
+#### KMO - Anti-Image
+
+```{r}
+#Faktor Analizi Uygulanabilirligi (KMO - Anti-Image - Bartlett Test)
+library(psych)
+KMO(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")]) 
+```
+
+**maxheartrate** için MSA değeri 0.61 olduğu için bu değişken faktör analizine daha uygunken, **restingBP** ve **serumcholestrol** için MSA değerleri 0.53 ile biraz daha düşük kalıyor.
+
+#### Bartlett Küresellik Testi
+
+```{r}
+#Bartlett Küresellik Testi(Bartlett's Test of Spherecity) 
+cortest.bartlett(cor(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")]),nrow(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")])) #Bartlett test 
+```
+
+-   **Hipotezler**:
+
+    -   **H₀ (Null Hipotezi)**: Korelasyon matrisinin birim matris olduğu, yani değişkenler arasında bir ilişkilerin olmadığı varsayılır.
+
+    -   **H₁ (Alternatif Hipotezi)**: Korelasyon matrisinin birim matris olmadığı, yani değişkenler arasında ilişkilerin bulunduğu varsayılır.
+
+        p-değeri =(4.61 × 10⁻¹³)\< 0.05 olduğundan, **H₀** **reddedilir**.
+
+#### Kok lambda yaklasimi
+
+```{r}
+#Temel Bilesenler Analizi Yöntemi(Kok lambda yaklasimi) secilerek faktor analizi
+fa_kokl <- principal(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")], nfactors =3, rotate = "none")
+
+print(fa_kokl$loadings, digits=3, cutoff=.3, sort=TRUE) 
+```
+
+-   **PC1** yüksek varyansa sahip ve *restingBP* ve *serumcholestrol* ile güçlü bir ilişki gösteriyor.
+
+-   **PC2** de yüksek varyansa sahip ve özellikle *maxheartrate* ile güçlü bir ilişki göstermektedir.
+
+-   **PC3** daha düşük varyansa sahip ve *serumcholestrol* ile ilişkili.
+
+```{r}
+colSums(fa_kokl$loadings[ , ]^2)/9 #varyans aciklama oranlari (yukarıdaki fonksiyon çıktılarında da var)
+
+```
+
+```{r}
+plot(fa_kokl$values, type="b", main="ScreePlot", xlab="Number of Factors", ylab="Eigenvalues")
+```
+
+özdeğerlerdeki düşüşün ilk ve ikinci faktörler arasında keskin olduğunu, ardından daha kademeli bir düşüş olduğunu gösteriyor.
+
+```{r}
+#caused cıkarılıyor
+fa_kokl11 <- principal(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")], nfactors =3, rotate = "none")
+print(fa_kokl11$loadings, digits=3, cutoff=.3, sort=TRUE)
+```
+
+-   **PC1**: *restingBP* ve *serumcholestrol* ile yüksek pozitif ilişki (0.731 ve 0.723) gösteriyor. Bu, bu iki değişkenin bir arada hareket ettiğini ve birincil bileşenin bu iki değişkeni temsil ettiğini gösteriyor.
+
+-   **PC2**: *restingBP* negatif yük (–0.630) ile *maxheartrate* yüksek pozitif yük (0.880) ile ilişkilendirilmiş. Bu, PC2'nin bu iki değişkenin zıt yönlerde hareket ettiğini gösteriyor.
+
+-   **PC3**: *serumcholestrol* ile pozitif bir ilişki (0.617) var. Diğer değişkenlerle çok güçlü bir ilişki göstermiyor, bu da üçüncü bileşenin daha düşük varyans açıklamasına neden oluyor.
+
+#### 
+
+```{r}
+fa.diagram(fa_kokl)
+
+```
+
+-   **PC1**, hem restingBP (0.7) hem de serumcholestrol (0.7) tarafından orta düzeyde etkilenmektedir.
+
+-   **PC2**, öncelikle maxheartrate (0.9) tarafından yüklenmiştir.
+
+-   **PC3**'ün kayda değer bir yükü bulunmamaktadır.
+
+```{r}
+fyuk <- fa_kokl$loadings[,1:3]#degiskenlerin faktor yukleri
+library(scatterplot3d)
+s3d <- scatterplot3d(as.data.frame(unclass(fyuk)), main="3D factor loadings", color=1:ncol(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")][,-4]), pch=20)
+text(s3d$xyz.convert(fyuk), labels = rownames(fyuk),
+     cex= 0.7, col = 1:ncol(df_faktor[, c("restingBP", "serumcholestrol", "maxheartrate")][,-4]))
+
+```
+
+-   **restingBP**, temel olarak PC1 ekseni boyunca hizalanmıştır.
+
+-   **serumcholestrol** ve **maxheartrate** değişkenlerinin yük vektörleri PC1 ve PC2 eksenleri arasında yer almaktadır.
+
+-   PC3 üzerine güçlü bir şekilde yüklenen bir değişken yoktur, bu da bu bileşenin çok az varyansı açıkladığını doğrular.
+
+# 5) Lineer Diskriminant Analizi
+
+Bu analizde, bağımsız değişkenler olarak "restingBP", "age", "serumcholestrol" ve "maxheartrate", bağımlı değişken olarak ise "target" kullanılmıştır. Korelasyon analizi yapılarak, bağımsız değişkenler arasındaki ilişkiler incelenmiştir. Ayrıca, verinin normalliği kontrol edilerek, verilerin normal dağılıma uygun olduğu kararı verilmiştir.
+
+#### Korelasyon ve normallık incelemeleri
+
+```{r}
+# 'target' dahil, ancak sadece diğer değişkenlerin korelasyonuna bakma
+df_dis <- df[, c("restingBP", "age", "serumcholestrol", "maxheartrate", "target")]
+
+# Korelasyon hesaplama (Spearman yöntemiyle), sadece ilk dört sütun
+cor_matrix <- cor(df_dis[,-ncol(df_dis)], method = "spearman")
+
+# Korelasyon matrisini görselleştirme
+library(corrplot)
+corrplot(cor_matrix, method = "number")
+```
+
+Görseldeki korelasyon analizine göre, değişkenler arasında belirgin güçlü bir ilişki gözlemlenmemektedir. Bu, çoklu bağlantı (multicollinearity) sorununun olmadığı ve dolayısıyla analizlere devam edilebileceği anlamına gelmektedir.
+
+```{r}
+#Multivariate Normality
+library(dplyr)
+library(rstatix)
+df_dis %>% 
+  dplyr::select(!c(target)) %>%
+  mshapiro_test()
+```
+
+Hipotez:
+
+-   **H0 (null hipotezi)**: Veri normal dağılıma uygundur.
+
+-   **H1 (alternatif hipotez)**: Veri normal dağılıma uygun değildir.
+
+p-değeri = 0.0544 \> 0.05 H0 **Reddedilemez**, yani verinin normal dağıldığı söylenebilir.
+
+veri normal dağıldığı için analize devam edildi.
+
+#### Homogeneity of Covariances
+
+```{r}
+#Homogeneity of Covariances
+library(biotools)
+boxM(df_dis[,-5], df_dis$target)
+```
+
+Hipotez:
+
+H0 : sınıfların varyans kovaryans matrislero eşittir (homojenlik)
+
+H1 : sınıfların varyans Kovaryans matrisleri eşit değildir (homojenlik)
+
+2.2e-16 \< 0.05 **H0 reddedilir** yani homojen değildir.
+
+#### Linear Discriminant Analysis - Binary-class
+
+```{r}
+#Linear Discriminant Analysis - Binary-class
+library(MASS)
+
+# LDA modelini oluşturma
+lda_model <- lda(target ~ restingBP + age + serumcholestrol + maxheartrate, data = df_dis)
+
+# Modeli görüntüleme
+lda_model
+
+```
+
+```{r}
+# Sabit terimi (constant) hesaplama
+cons <- apply(df_dis[,-5], 2, mean)
+
+# Sabit terim ile LDA'nın scaling matrisini çarpma
+(-cons) %*% (lda_model$scaling)
+```
+
+Diskriminant fomksiyonu :
+
+Y= -7.544 +0.0287 restingBP -0.00166 age -0.0050 serumcholestrol + 0.00999 maxheartrate
+
+```{r}
+#Grup tahmini yapilmasi
+lda_pred <- predict(lda_model)
+lda_pred$class # Sinifatamalari 
+```
+
+```{r}
+#Diskriminant skorları için
+# lda_pred$x
+```
+
+```{r}
+# plots
+library(MASS)
+ldahist(lda_pred$x, g = df_dis$target)
+```
+
+group 0 için :
+
+ Bu histogramda verilerin büyük çoğunluğunun -2 ile 1 aralığında ve biraz daha çok -1 ile 0 arasında yoğunlaştığı görülüyor. Ayrıca, histogramın sağ tarafında küçük bir grup daha var.
+
+group 1 için:
+
+Verilerin büyük çoğunluğu -1 ile 2 aralığında ve özellikle 0 ile 1 aralığında yoğunlaşmış durumda.
+
+```{r}
+# Çapraz tablo oluşturma
+tablo <- table(df_dis$target, lda_pred$class)
+tablo
+```
+
+model **0** sınıfı için 303 doğru tahmin yaparken, 117 yanlış tahmin yapmış. **1** sınıfı için ise 426 doğru tahmin yaparken, 101 yanlış tahmin yapmış. Bu sonuç, modelin her iki sınıfı da oldukça iyi ayırt ettiğini gösteriyor.
+
+```{r}
+#Dogru siniflanma orani
+classrate<-sum(diag(tablo))/sum(tablo)
+classrate
+```
+
+Doğru sınıflandırma oranı **0.7698** (yaklaşık %77) olarak hesaplanmıştır.
+
+```{r}
+#Nispi sans kriteri p1^2+p^2
+lda_model$prior[1]^2 + lda_model$prior[2]^2
+```
+
+Bu, modelin doğru sınıflandırma şansının **yaklaşık %51** olduğunu gösterir.
+
+```{r}
+#Orjinal gruplar ile Tahmin edilen grupların karşılaştırılması
+comp <- cbind(df_dis$target, lda_pred$class)
+```
+
+```{r}
+##Stepwise 
+library(klaR)
+stepwise_model <- greedy.wilks(target ~ ., data = df_dis)
+stepwise_model$results
+```
+
+**Anova için yorum :**
+
+-   **H₀ (Null Hipotezi)**: İncelenen bağımsız değişkenlerin, bağımlı değişken üzerinde anlamlı bir etkisi yoktur.
+
+-   **H₁ (Alternatif Hipotez)**: Bağımsız değişkenlerin, bağımlı değişken üzerinde anlamlı bir etkisi vardır.
+
+-   **p değeri =** **7.54e-57\< 0.05 H0 Red** : Bu, **restingBP** değişkeninin gruplar arasında anlamlı farklar yarattığını gösteriyor.
+
+-   **p değeri = 3.02e-77 \< 0.05 H₀** **Red**: Bu, **serumcholestrol** değişkeninin gruplar arasında anlamlı farklar yarattığını gösteriyor.
+
+-   **p değeri = 6.67e-84 \< 0.05 H₀** **Red**: Bu, **maxheartrate** değişkeninin gruplar arasında anlamlı farklar yarattığını gösteriyor.
+
+**Wilks' Lambda yorumu :**
+
+Wilks' Lambda değeri **maxheartrate** için en düşük olan değere sahip, yani **0.6624373**. Bu, **maxheartrate** değişkeninin gruplar arasındaki ayrımda en kuvvetli ve en anlamlı değişken olduğunu gösteriyor.
+
+# 6) Kümeleme Analizi
+
+```{r}
+library(haven)
+library(dendextend) # dendrogram lara arti ozellikler getirir
+```
+
+```{r}
+df_kum <- df[, c("restingBP", "age", "serumcholestrol", "maxheartrate")]
+df_kum <- scale(df_kum)
+```
+
+```{r}
+library(corrplot)
+corrplot(cor(df_kum[, c("restingBP", "age", "serumcholestrol", "maxheartrate")]))
+korelasyon<-cor(df_kum[, c("restingBP", "age", "serumcholestrol", "maxheartrate")])
+korelasyon
+```
+
+```{r}
+# Korelasyon matrisinin incelenmesi
+library("Hmisc")
+rcorr(as.matrix(df_kum),type="pearson") 
+```
+
+```{r}
+# Hiyerarsik Kümeleme
+d <- dist(df_kum, method = "euclidean") # uzaklik matrisi
+fit <- hclust(d, method="ward.D") # method= "single", "complete", "average", "ward.D", "centroid"
+dend<-as.dendrogram(fit) # Dendogram çizimi
+plot(dend)
+```
+
+```{r}
+plot(color_branches(dend, k=3))
+
+```
+
+#### K-MEANS
+
+```{r}
+############     K-MEANS #############
+library(factoextra)
+fviz_nbclust(df_kum, kmeans, method = "wss")
+```
+
+```{r}
+fviz_nbclust(df_kum, kmeans, method = "silhouette")
+
+```
+
+```{r}
+set.seed(95739487) 
+km.res <- kmeans(df_kum,3, iter.max=10, algorithm="Lloyd")
+t(km.res$centers)  #Cluster means = SPSS'teki Final Cluster Centers
+
+```
+
+```{r}
+#Ilk iki faktörün cizdirilmesi
+library(cluster)
+clusplot(df_kum, km.res$cluster, main='2D representation of the Cluster solution',
+         color=TRUE, shade=TRUE,
+         labels=2, lines=0)
+```
+
+```{r}
+#ya da bu fonksiyonla Temel Bileşenlere Göre
+fviz_cluster(km.res, data = df_kum, palette = "jco",
+             ggtheme = theme_minimal())
+```
+
+# 7) **Lojistik Regresyon**
+
+```{r}
+suppressMessages(library(tidyverse))
+suppressMessages(library(modelr))
+suppressMessages(library(broom))
+```
+
+```{r}
+###Uygulama-1: Binary Logistic Regression-Skulls Data
+df_log = df_dis <- df[, c("restingBP", "age", "serumcholestrol","maxheartrate", "target")]
+
+# Korelasyon hesaplama (Spearman yöntemiyle), sadece ilk dört sütun
+cor_matrix <- cor(df_log[,-ncol(df_dis)], method = "spearman")
+
+# Korelasyon matrisini görselleştirme
+library(corrplot)
+corrplot(cor_matrix, method = "number")
+```
+
+```{r}
+#Logistic Regresyon 
+model_target <- glm(target ~restingBP+age+serumcholestrol+maxheartrate, family = "binomial", data = df_log)
+summary(model_target)
+
+```
+
+```{r}
+### SPSS OBND0MUS TESTS OF MODEL COEFFD0CD0ENTS TABLOSU  ###
+#Ki-kare istatistginin hesabi
+model_target$deviance
+```
+
+```{r}
+model_target$null.deviance
+
+```
+
+```{r}
+kikare<- model_target$null.deviance-model_target$deviance
+kikare
+```
+
+```{r}
+#serbestlik derecesi hesabi
+model_target$df.null
+```
+
+```{r}
+model_target$df.residual
+
+```
+
+```{r}
+df<-model_target$df.null-model_target$df.residual
+df
+```
+
+```{r}
+#Ki kare istatistigine ait p degerinin hesabi (p<0.05 ise eklenen degiskenlerin modele katkisi anlamlidir.)
+kikare.p<- 1 - pchisq(kikare,df)
+kikare.p
+```
+
+```{r}
+###Hoshmer Lemeshov hesabi (p>0.05 ise model anlamlD1dD1r. yani model veriye uyumludur.)
+
+library(ResourceSelection)
+hoslem.test(model_target$y,fitted(model_target))
+```
+
+```{r}
+#Modelin R^2 degerlerinin hesabi 
+
+library("DescTools")
+PseudoR2(model_target, which = c("CoxSnell","Nagelkerke","McFadden"))
+```
+
+```{r}
+#Model katsayilarinin exponential alinmis hali ve güven araliklari
+exp(coef(model_target))
+```
+
+```{r}
+exp(confint.default(model_target,level = 0.95)) 
+```
+
+```{r}
+#Atama Tablosu
+type_pred<-fitted(model_target)
+typefac<- ifelse(type_pred>0.5,"B","A")
+t_tab <- table(df_log$target, typefac)
+t_tab
+```
+
+```{r}
+#Toplam Dogru Atanma Yüzdesi
+sum(diag(t_tab)) / sum(t_tab)
+```
+
+```{r}
+#Atama Tablosu Görselleştirme
+library(cvms)
+library(ggplot2)
+library(broom)    # tidy()
+library(tibble)   # tibble()
+datatib <- tibble("target" = df_log$target,"prediction" = typefac)
+
+basic_table <- table(datatib)
+
+cfm <- tidy(basic_table)
+
+```
+
+```{r}
+plot_confusion_matrix(cfm, 
+                      target_col = "target", 
+                      prediction_col = "prediction",
+                      counts_col = "n",
+                      add_normalized = FALSE,
+                      add_row_percentages = FALSE,
+                      font_col_percentages= font(size = 6),
+                      font_counts = font(size = 6),
+                      tile_border_color = "black")+
+  xlab("Gercek")+
+  ylab("Tahmin")+
+  theme(axis.text=element_text(size=12,face="bold"),axis.title=element_text(size=14,face="bold"))
+```
+
+```{r}
+#Stepwise Yöntemler ile Lojistik Regresyon
+suppressMessages(library(MASS))
+
+step_model<-step(model_target,direction="both") #direction=c("backward","forward","both") 
+step_model
+summary(step_model)
+exp(step_model$coefficients)
+exp(confint.default(step_model,level = 0.95)) 
+
+```
+
+```{r}
+#Atama Tablosu
+type_pred2<-fitted(step_model)
+typefac2<- ifelse(type_pred>0.5,"B","A")
+t_tab2 <- table(df_log$target, typefac)
+t_tab2
+
+```
