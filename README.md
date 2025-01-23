@@ -19,3 +19,4 @@ Developed a predictive model to classify the presence of heart disease. Variable
 
 This project showcases the application of multivariate statistical methods in healthcare analytics. By leveraging R, SAS, and SPSS, it combines robust statistical methodologies with cutting-edge software capabilities to deliver reliable and actionable insights.
 
+![Ekran görüntüsü 2025-01-23 195028](https://github.com/user-attachments/assets/7e8f12e5-20f5-4cca-a033-3741f3dc147c)
