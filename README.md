@@ -1,6 +1,4 @@
 # Advanced Multivariate Statistical Analysis Using R, SAS, and SPSS
-![image](https://github.com/user-attachments/assets/cd041997-3184-4dfe-b9c1-e801ceaa0d2f)
-
 This project involves an in-depth multivariate statistical analysis using powerful tools like R, SAS, and SPSS. The analysis is based on a dataset of 1,000 observations and 14 variables collected from hospitals in India for early-stage heart disease detection. It integrates advanced statistical techniques and machine learning approaches to uncover insights and patterns.
 
 ## Overview of the Project
