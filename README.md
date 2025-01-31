@@ -18,6 +18,5 @@ Grouped observations into clusters based on similarities in variables such as ag
 Developed a predictive model to classify the presence of heart disease. Variables such as resting blood pressure, cholesterol, and heart rate were significant predictors. The model achieved a classification accuracy of 77.2%, highlighting its potential in clinical decision-making.
 
 This project showcases the application of multivariate statistical methods in healthcare analytics. By leveraging R, SAS, and SPSS, it combines robust statistical methodologies with cutting-edge software capabilities to deliver reliable and actionable insights.
-
 ![image](https://github.com/user-attachments/assets/c23ba6ec-0d7d-407f-81ee-e3647923148c)
 
